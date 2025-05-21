@@ -1,0 +1,292 @@
+<!DOCTYPE html>
+<html lang="es">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Editor Dark Mode Moderno</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+      body {
+        margin: 0;
+        font-family: "Segoe UI", sans-serif;
+        background-color: #121212;
+        display: flex;
+      }
+      #panel {
+        width: 70px;
+        background: linear-gradient(to bottom, #1c1c1c, #141414);
+        color: #ccc;
+        padding: 15px 5px;
+        box-shadow: 6px 0 10px rgba(0, 0, 0, 0.5);
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+      }
+      #titulo {
+        font-size: 18px;
+        font-weight: bold;
+        color: #ddd;
+        margin-bottom: 10px;
+        text-align: center;
+      }
+      .color {
+        width: 32px;
+        height: 32px;
+        border-radius: 8px;
+        margin: 6px 0;
+        cursor: pointer;
+      }
+      .slider-container {
+        margin: 18px 0 10px 0;
+        text-align: center;
+        width: 100%;
+      }
+      .boton {
+        width: 40px;
+        height: 40px;
+        margin: 7px 0;
+        border: none;
+        border-radius: 10px;
+        font-size: 18px;
+        color: white;
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        transition: background 0.2s;
+      }
+      .boton:active {
+        filter: brightness(0.8);
+      }
+      #colorPersonalizado {
+        width: 32px;
+        height: 32px;
+        margin: 8px 0;
+        border-radius: 8px;
+        border: none;
+        background: #222;
+        padding: 0;
+      }
+      #valorGrosor {
+        font-size: 12px;
+        color: #aaa;
+      }
+      #canvas-container {
+        flex-grow: 1;
+        background-color: #121212;
+        position: relative;
+      }
+      canvas {
+        display: block;
+        background-color: #121212;
+      }
+      .tooltip {
+        position: absolute;
+        left: 60px;
+        background: #222;
+        color: #fff;
+        padding: 2px 8px;
+        border-radius: 4px;
+        font-size: 12px;
+        opacity: 0;
+        pointer-events: none;
+        transition: opacity 0.2s;
+        z-index: 10;
+      }
+      .boton:hover .tooltip {
+        opacity: 1;
+      }
+    </style>
+  </head>
+  <body>
+    <div id="panel">
+      <div id="titulo">Editor</div>
+      <button id="volver" class="boton" style="background-color: #333;" title="Volver al inicio">
+        <i class="fa fa-home"></i>
+      </button>
+      <div id="colores"></div>
+      <input type="color" id="colorPersonalizado" title="Color personalizado">
+      <div class="slider-container">
+        <input type="range" id="grosor" min="1" max="30" value="6" style="width: 40px;" />
+        <div id="valorGrosor">6</div>
+      </div>
+      <button id="deshacer" class="boton" style="background-color: #607d8b" title="Deshacer">
+        <i class="fa fa-undo"></i>
+      </button>
+      <button id="rehacer" class="boton" style="background-color: #009688" title="Rehacer">
+        <i class="fa fa-redo"></i>
+      </button>
+      <input type="file" id="cargarImagen" accept="image/*" style="display:none" />
+      <button id="cargarFondo" class="boton" style="background-color: #ffb300" title="Cargar fondo">
+        <i class="fa fa-image"></i>
+      </button>
+      <button id="cambiarTamanio" class="boton" style="background-color: #673ab7" title="Cambiar tamaño">
+        <i class="fa fa-expand"></i>
+      </button>
+      <button id="limpiar" class="boton" style="background-color: #f44336" title="Limpiar">
+        <i class="fa fa-eraser"></i>
+      </button>
+      <button id="guardar" class="boton" style="background-color: #4caf50" title="Guardar">
+        <i class="fa fa-save"></i>
+      </button>
+    </div>
+    <div id="canvas-container">
+      <canvas id="lienzo" width="920" height="700"></canvas>
+    </div>
+    <script>
+      // Paleta de colores
+      const colores = [
+        { nombre: "Borrador", color: "#ffffff" },
+        { nombre: "Negro", color: "#000000" },
+        { nombre: "Rojo", color: "#f44336" },
+        { nombre: "Verde", color: "#4caf50" },
+        { nombre: "Azul", color: "#2196f3" },
+        { nombre: "Amarillo", color: "#ffeb3b" },
+        { nombre: "Naranja", color: "#ff9800" },
+      ];
+
+      const coloresDiv = document.getElementById("colores");
+      const canvas = document.getElementById("lienzo");
+      const ctx = canvas.getContext("2d");
+      let dibujando = false;
+      let colorActual = "#000000";
+      let grosor = 6;
+
+      // Historial para deshacer/rehacer
+      let historial = [];
+      let rehacerHistorial = [];
+      function guardarEstado() {
+        if (historial.length > 50) historial.shift();
+        historial.push(canvas.toDataURL());
+        rehacerHistorial = [];
+      }
+
+      // Inicializar colores
+      colores.forEach(({ nombre, color }) => {
+        const div = document.createElement("div");
+        div.className = "color";
+        div.style.backgroundColor = color;
+        div.title = nombre;
+        div.onclick = () => (colorActual = color);
+        coloresDiv.appendChild(div);
+      });
+
+      // Color personalizado
+      document.getElementById("colorPersonalizado").oninput = function () {
+        colorActual = this.value;
+      };
+
+      // Slider de grosor
+      const slider = document.getElementById("grosor");
+      const valorGrosor = document.getElementById("valorGrosor");
+      slider.oninput = function () {
+        grosor = parseInt(this.value);
+        valorGrosor.textContent = this.value;
+      };
+
+      // Dibujo
+      canvas.onmousedown = (e) => {
+        guardarEstado();
+        dibujando = true;
+        ctx.beginPath();
+        ctx.moveTo(e.offsetX, e.offsetY);
+      };
+
+      canvas.onmousemove = (e) => {
+        if (dibujando) {
+          ctx.lineTo(e.offsetX, e.offsetY);
+          ctx.strokeStyle = colorActual;
+          ctx.lineWidth = grosor;
+          ctx.lineCap = "round";
+          ctx.stroke();
+        }
+      };
+
+      canvas.onmouseup = () => (dibujando = false);
+      canvas.onmouseleave = () => (dibujando = false);
+
+      // Limpiar
+      document.getElementById("limpiar").onclick = () => {
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        guardarEstado();
+      };
+
+      // Guardar
+      document.getElementById("guardar").onclick = () => {
+        const enlace = document.createElement("a");
+        enlace.download = "dibujo.png";
+        enlace.href = canvas.toDataURL();
+        enlace.click();
+      };
+
+      // Volver al index
+      document.getElementById("volver").onclick = () => {
+        window.location.href = "index.html";
+      };
+
+      // Deshacer
+      document.getElementById("deshacer").onclick = () => {
+        if (historial.length > 0) {
+          rehacerHistorial.push(canvas.toDataURL());
+          let img = new Image();
+          img.src = historial.pop();
+          img.onload = () => {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+          };
+        }
+      };
+
+      // Rehacer
+      document.getElementById("rehacer").onclick = () => {
+        if (rehacerHistorial.length > 0) {
+          let img = new Image();
+          img.src = rehacerHistorial.pop();
+          img.onload = () => {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+          };
+          guardarEstado();
+        }
+      };
+
+      // Cargar imagen de fondo
+      document.getElementById("cargarFondo").onclick = () => {
+        document.getElementById("cargarImagen").click();
+      };
+      document.getElementById("cargarImagen").onchange = function (e) {
+        const file = e.target.files[0];
+        if (!file) return;
+        const reader = new FileReader();
+        reader.onload = function (evt) {
+          const img = new Image();
+          img.onload = function () {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+            guardarEstado();
+          };
+          img.src = evt.target.result;
+        };
+        reader.readAsDataURL(file);
+      };
+
+      // Cambiar tamaño del lienzo
+      document.getElementById("cambiarTamanio").onclick = () => {
+        const ancho = prompt("Nuevo ancho del lienzo:", canvas.width);
+        const alto = prompt("Nuevo alto del lienzo:", canvas.height);
+        if (ancho && alto && !isNaN(ancho) && !isNaN(alto)) {
+          const temp = document.createElement("canvas");
+          temp.width = canvas.width;
+          temp.height = canvas.height;
+          temp.getContext("2d").drawImage(canvas, 0, 0);
+          canvas.width = parseInt(ancho);
+          canvas.height = parseInt(alto);
+          ctx.drawImage(temp, 0, 0);
+        }
+      };
+
+      // Guardar estado inicial
+      guardarEstado();
+    </script>
+  </body>
+</html>
