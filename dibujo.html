@@ -9,15 +9,15 @@
       body {
         margin: 0;
         font-family: "Segoe UI", sans-serif;
-        background-color: #121212;
+        background-color: #f5faff;
         display: flex;
       }
       #panel {
         width: 70px;
-        background: linear-gradient(to bottom, #1c1c1c, #141414);
-        color: #ccc;
+        background: linear-gradient(to bottom, #1565c0, #1976d2);
+        color: #fff;
         padding: 15px 5px;
-        box-shadow: 6px 0 10px rgba(0, 0, 0, 0.5);
+        box-shadow: 6px 0 10px rgba(21, 101, 192, 0.15);
         display: flex;
         flex-direction: column;
         align-items: center;
@@ -25,7 +25,7 @@
       #titulo {
         font-size: 18px;
         font-weight: bold;
-        color: #ddd;
+        color: #fff;
         margin-bottom: 10px;
         text-align: center;
       }
@@ -35,6 +35,13 @@
         border-radius: 8px;
         margin: 6px 0;
         cursor: pointer;
+        border: 2px solid #fff;
+        box-sizing: border-box;
+        transition: transform 0.1s;
+      }
+      .color:hover {
+        transform: scale(1.1);
+        border: 2px solid #ffeb3b;
       }
       .slider-container {
         margin: 18px 0 10px 0;
@@ -48,42 +55,47 @@
         border: none;
         border-radius: 10px;
         font-size: 18px;
-        color: white;
+        color: #1565c0;
+        background-color: #fff;
         cursor: pointer;
         display: flex;
         align-items: center;
         justify-content: center;
-        transition: background 0.2s;
+        transition: background 0.2s, color 0.2s;
       }
       .boton:active {
-        filter: brightness(0.8);
+        filter: brightness(0.9);
       }
       #colorPersonalizado {
         width: 32px;
         height: 32px;
         margin: 8px 0;
         border-radius: 8px;
-        border: none;
-        background: #222;
+        border: 2px solid #1565c0;
+        background: #fff;
         padding: 0;
       }
       #valorGrosor {
         font-size: 12px;
-        color: #aaa;
+        color: #1565c0;
       }
       #canvas-container {
         flex-grow: 1;
-        background-color: #121212;
+        background-color: #f5faff;
         position: relative;
       }
       canvas {
         display: block;
-        background-color: #121212;
+        background-color: #fff;
+        border: 2px solid #1976d2;
+        border-radius: 10px;
+        margin: 20px auto;
+        box-shadow: 0 4px 24px rgba(21, 101, 192, 0.08);
       }
       .tooltip {
         position: absolute;
         left: 60px;
-        background: #222;
+        background: #1976d2;
         color: #fff;
         padding: 2px 8px;
         border-radius: 4px;
@@ -101,32 +113,32 @@
   <body>
     <div id="panel">
       <div id="titulo">Editor</div>
-      <button id="volver" class="boton" style="background-color: #333;" title="Volver al inicio">
+      <button id="volver" class="boton" title="Volver al inicio">
         <i class="fa fa-home"></i>
       </button>
       <div id="colores"></div>
       <input type="color" id="colorPersonalizado" title="Color personalizado">
-      <div class="slider-container">
+      <div class="slider-container"></div>
         <input type="range" id="grosor" min="1" max="30" value="6" style="width: 40px;" />
         <div id="valorGrosor">6</div>
       </div>
-      <button id="deshacer" class="boton" style="background-color: #607d8b" title="Deshacer">
+      <button id="deshacer" class="boton" title="Deshacer">
         <i class="fa fa-undo"></i>
       </button>
-      <button id="rehacer" class="boton" style="background-color: #009688" title="Rehacer">
+      <button id="rehacer" class="boton" title="Rehacer">
         <i class="fa fa-redo"></i>
       </button>
       <input type="file" id="cargarImagen" accept="image/*" style="display:none" />
-      <button id="cargarFondo" class="boton" style="background-color: #ffb300" title="Cargar fondo">
+      <button id="cargarFondo" class="boton" title="Cargar fondo"></button>
         <i class="fa fa-image"></i>
       </button>
-      <button id="cambiarTamanio" class="boton" style="background-color: #673ab7" title="Cambiar tamaño">
+      <button id="cambiarTamanio" class="boton" title="Cambiar tamaño">
         <i class="fa fa-expand"></i>
       </button>
-      <button id="limpiar" class="boton" style="background-color: #f44336" title="Limpiar">
+      <button id="limpiar" class="boton" title="Limpiar">
         <i class="fa fa-eraser"></i>
       </button>
-      <button id="guardar" class="boton" style="background-color: #4caf50" title="Guardar">
+      <button id="guardar" class="boton" title="Guardar">
         <i class="fa fa-save"></i>
       </button>
     </div>
@@ -134,22 +146,24 @@
       <canvas id="lienzo" width="920" height="700"></canvas>
     </div>
     <script>
-      // Paleta de colores
+      // Paleta de colores extendida
       const colores = [
         { nombre: "Borrador", color: "#ffffff" },
-        { nombre: "Negro", color: "#000000" },
-        { nombre: "Rojo", color: "#f44336" },
-        { nombre: "Verde", color: "#4caf50" },
-        { nombre: "Azul", color: "#2196f3" },
-        { nombre: "Amarillo", color: "#ffeb3b" },
-        { nombre: "Naranja", color: "#ff9800" },
+        { nombre: "Negro", color: "#222222" },
+        { nombre: "Rojo", color: "#e53935" },
+        { nombre: "Naranja", color: "#fb8c00" },
+        { nombre: "Amarillo", color: "#fbc02d" },
+        { nombre: "Verde", color: "#43a047" },
+        { nombre: "Cian", color: "#00bcd4" },
+        { nombre: "Azul", color: "#1976d2" },
+        { nombre: "Violeta", color: "#8e24aa" }
       ];
 
       const coloresDiv = document.getElementById("colores");
       const canvas = document.getElementById("lienzo");
       const ctx = canvas.getContext("2d");
       let dibujando = false;
-      let colorActual = "#000000";
+      let colorActual = "#1976d2";
       let grosor = 6;
 
       // Historial para deshacer/rehacer

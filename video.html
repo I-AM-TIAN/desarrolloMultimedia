@@ -4,73 +4,93 @@
     <meta charset="UTF-8">
     <title>Editor de Video</title>
     <style>
+        :root {
+            --primary: #222;
+            --secondary: #fff;
+            --accent: #4f8cff;
+            --bg: #f7f7f7;
+            --border: #e0e0e0;
+        }
         body {
-            background: linear-gradient(135deg, #232526 0%, #414345 100%);
-            color: #fff;
+            background: var(--bg);
+            color: var(--primary);
             font-family: 'Segoe UI', Arial, sans-serif;
-            min-height: 100vh;
             margin: 0;
-            padding: 0;
-            text-align: center;
+            min-height: 100vh;
         }
         h1 {
-            margin-top: 30px;
-            font-size: 2.2em;
-            letter-spacing: 1px;
-            color: #ffb347;
-            text-shadow: 1px 2px 8px #0008;
+            margin: 32px 0 16px 0;
+            font-size: 2em;
+            color: var(--primary);
+            font-weight: 600;
+            letter-spacing: 0.5px;
+            text-align: center;
         }
         #controls, #filters {
-            margin: 20px auto;
             display: flex;
             justify-content: center;
-            gap: 15px;
+            align-items: center;
+            gap: 16px;
+            margin: 18px 0;
             flex-wrap: wrap;
         }
         #filters label {
-            margin-right: 8px;
+            margin-right: 4px;
+            font-size: 1em;
+            color: #444;
         }
         input[type="file"] {
-            margin: 20px auto;
             display: block;
-            color: #fff;
-            background: #444;
-            border: none;
-            padding: 10px;
-            border-radius: 5px;
+            margin: 24px auto 0 auto;
+            padding: 8px 12px;
+            border: 1px solid var(--border);
+            border-radius: 6px;
+            background: var(--secondary);
+            color: var(--primary);
+            font-size: 1em;
+            transition: border 0.2s;
+        }
+        input[type="file"]:focus {
+            border-color: var(--accent);
+            outline: none;
         }
         button {
-            background: #ffb347;
-            color: #222;
+            background: var(--accent);
+            color: var(--secondary);
             border: none;
-            padding: 10px 18px;
-            border-radius: 5px;
+            padding: 9px 20px;
+            border-radius: 6px;
             font-size: 1em;
             cursor: pointer;
             transition: background 0.2s;
-            box-shadow: 0 2px 8px #0004;
+            font-weight: 500;
         }
         button:disabled {
-            background: #888;
-            color: #ccc;
+            background: #bfcbe3;
+            color: #fff;
             cursor: not-allowed;
         }
         select, input[type="range"] {
             padding: 5px;
             border-radius: 5px;
-            border: none;
+            border: 1px solid var(--border);
             font-size: 1em;
-            background: #333;
-            color: #fff;
+            background: var(--secondary);
+            color: var(--primary);
+        }
+        select:focus, input[type="range"]:focus {
+            border-color: var(--accent);
+            outline: none;
         }
         canvas {
-            margin: 30px auto 0 auto;
+            margin: 32px auto 0 auto;
             display: block;
-            border-radius: 12px;
-            box-shadow: 0 4px 24px #0007;
-            max-width: 90vw;
+            border-radius: 10px;
+            box-shadow: 0 2px 16px #0001;
+            max-width: 92vw;
             max-height: 60vh;
-            background: #111;
+            background: #eaeaea;
+            border: 1px solid var(--border);
         }
     </style>
 </head>
@@ -96,8 +116,8 @@
     </div>
     <video id="video" style="display:none"></video>
     <canvas id="canvas"></canvas>
-
     <script>
+        // (El mismo código JS que ya tienes)
         const videoInput = document.getElementById('videoInput');
         const video = document.getElementById('video');
         const canvas = document.getElementById('canvas');
@@ -153,7 +173,6 @@
                         data[i+1] = 255 - g;
                         data[i+2] = 255 - b;
                         break;
-                    // 'none' no hace nada
                 }
 
                 // Brillo
@@ -162,7 +181,6 @@
                 data[i+2] = data[i+2] * brightness;
 
                 // Contraste
-                // Fórmula: f = (259*(c+255))/(255*(259-c)), c = contraste*255-128
                 let c = contrast * 255 - 128;
                 let f = (259 * (c + 255)) / (255 * (259 - c));
                 data[i]   = f * (data[i]   - 128) + 128;
@@ -191,7 +209,6 @@
             animationId = requestAnimationFrame(drawFrame);
         }
 
-        // Redibujar al cambiar filtros
         [filterSelect, brightnessSlider, contrastSlider].forEach(el => {
             el.oninput = () => {
                 if (!video.paused) return;
@@ -209,4 +226,4 @@
         });
     </script>
 </body>
-</html></div>
+</html>
