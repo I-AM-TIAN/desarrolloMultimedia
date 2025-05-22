@@ -1,0 +1,299 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <title>Reproductor de Audios Avanzado</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Arial, sans-serif;
+            background: linear-gradient(120deg, #e0e7ff 0%, #f4f4f4 100%);
+            padding: 40px;
+            min-height: 100vh;
+        }
+        .player {
+            background: #fff;
+            padding: 32px 36px 28px 36px;
+            border-radius: 18px;
+            max-width: 420px;
+            margin: 40px auto;
+            box-shadow: 0 8px 32px rgba(0,0,0,0.10), 0 1.5px 6px #b6c3e6;
+            display: flex;
+            flex-direction: column;
+            gap: 18px;
+        }
+        #track-title {
+            font-size: 1.2em;
+            color: #2d3a5a;
+            margin-bottom: 8px;
+            display: block;
+            text-align: center;
+            font-weight: 600;
+        }
+        .controls {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 10px;
+            margin-top: 0;
+        }
+        .controls button {
+            background: #f0f4ff;
+            border: none;
+            border-radius: 50%;
+            width: 38px;
+            height: 38px;
+            font-size: 1.2em;
+            color: #2d3a5a;
+            cursor: pointer;
+            transition: background 0.2s, color 0.2s, box-shadow 0.2s;
+            box-shadow: 0 2px 6px rgba(44, 62, 80, 0.07);
+        }
+        .controls button:hover, .controls button:focus {
+            background: #007bff;
+            color: #fff;
+            outline: none;
+        }
+        .controls label {
+            margin-right: 4px;
+            color: #4a5874;
+        }
+        .progress {
+            width: 100%;
+            margin: 10px 0 0 0;
+            accent-color: #007bff;
+            height: 6px;
+            border-radius: 4px;
+            background: #e3e9f7;
+        }
+        .volume {
+            width: 90px;
+            accent-color: #007bff;
+        }
+        select#speed {
+            border-radius: 6px;
+            border: 1px solid #cfd8e3;
+            padding: 2px 8px;
+            background: #f8fafc;
+            color: #2d3a5a;
+            font-size: 1em;
+            margin: 0 4px;
+        }
+        #current-time, #duration {
+            font-family: 'Consolas', monospace;
+            font-size: 1em;
+            color: #4a5874;
+        }
+        .playlist {
+            margin-top: 18px;
+            padding: 0;
+            list-style: none;
+            max-height: 160px;
+            overflow-y: auto;
+            border-radius: 8px;
+            background: #f8fafc;
+            box-shadow: 0 1px 4px rgba(44, 62, 80, 0.04);
+        }
+        .playlist li {
+            cursor: pointer;
+            padding: 9px 14px;
+            border-radius: 6px;
+            margin: 2px 6px;
+            transition: background 0.18s, color 0.18s;
+            color: #2d3a5a;
+            font-size: 1em;
+        }
+        .playlist li.active, .playlist li:hover {
+            background: #007bff;
+            color: #fff;
+        }
+        #file-input {
+            margin-top: 12px;
+            width: 100%;
+            font-size: 0.98em;
+            color: #4a5874;
+        }
+        @media (max-width: 500px) {
+            .player {
+                padding: 16px 6vw 16px 6vw;
+                max-width: 98vw;
+            }
+            .controls {
+                flex-wrap: wrap;
+                gap: 6px;
+            }
+            .playlist li {
+                font-size: 0.98em;
+                padding: 8px 8px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="player">
+        <audio id="audio" preload="metadata"></audio>
+        <div>
+            <strong id="track-title">Selecciona una pista</strong>
+        </div>
+        <input type="range" id="progress" class="progress" value="0" min="0" max="100">
+        <div class="controls">
+            <button id="prev" title="Anterior">⏮️</button>
+            <button id="play" title="Reproducir">▶️</button>
+            <button id="pause" title="Pausar">⏸️</button>
+            <button id="stop" title="Detener">⏹️</button>
+            <button id="next" title="Siguiente">⏭️</button>
+        </div>
+        <div class="controls">
+            <label>Volumen</label>
+            <input type="range" id="volume" class="volume" min="0" max="1" step="0.01" value="1">
+            <label>Velocidad</label>
+            <select id="speed">
+                <option value="0.5">0.5x</option>
+                <option value="1" selected>1x</option>
+                <option value="1.5">1.5x</option>
+                <option value="2">2x</option>
+            </select>
+            <button id="mute" title="Silenciar">🔇</button>
+            <button id="loop" title="Repetir">🔁</button>
+        </div>
+        <div style="text-align:center;">
+            <span id="current-time">00:00</span> / <span id="duration">00:00</span>
+        </div>
+        <ul class="playlist" id="playlist">
+            <li data-src="audio1.mp3">Pista 1</li>
+            <li data-src="audio2.mp3">Pista 2</li>
+            <li data-src="audio3.mp3">Pista 3</li>
+        </ul>
+        <input type="file" id="file-input" accept="audio/*" multiple>
+    </div>
+    <script>
+        const audio = document.getElementById('audio');
+        const playBtn = document.getElementById('play');
+        const pauseBtn = document.getElementById('pause');
+        const stopBtn = document.getElementById('stop');
+        const prevBtn = document.getElementById('prev');
+        const nextBtn = document.getElementById('next');
+        const progress = document.getElementById('progress');
+        const volume = document.getElementById('volume');
+        const muteBtn = document.getElementById('mute');
+        const speed = document.getElementById('speed');
+        const loopBtn = document.getElementById('loop');
+        const currentTimeEl = document.getElementById('current-time');
+        const durationEl = document.getElementById('duration');
+        const playlist = document.getElementById('playlist');
+        const trackTitle = document.getElementById('track-title');
+        const fileInput = document.getElementById('file-input');
+
+        let tracks = Array.from(playlist.querySelectorAll('li')).map(li => ({
+            src: li.getAttribute('data-src'),
+            title: li.textContent
+        }));
+        let currentTrack = 0;
+        let isLoop = false;
+
+        function loadTrack(index) {
+            if (tracks.length === 0) return;
+            currentTrack = index;
+            audio.src = tracks[index].src;
+            trackTitle.textContent = tracks[index].title;
+            updatePlaylistUI();
+        }
+
+        function updatePlaylistUI() {
+            playlist.querySelectorAll('li').forEach((li, i) => {
+                li.classList.toggle('active', i === currentTrack);
+            });
+        }
+
+        playBtn.onclick = () => audio.play();
+        pauseBtn.onclick = () => audio.pause();
+        stopBtn.onclick = () => { audio.pause(); audio.currentTime = 0; };
+        prevBtn.onclick = () => {
+            currentTrack = (currentTrack - 1 + tracks.length) % tracks.length;
+            loadTrack(currentTrack);
+            audio.play();
+        };
+        nextBtn.onclick = () => {
+            currentTrack = (currentTrack + 1) % tracks.length;
+            loadTrack(currentTrack);
+            audio.play();
+        };
+
+        progress.oninput = () => {
+            audio.currentTime = (progress.value / 100) * audio.duration;
+        };
+
+        audio.ontimeupdate = () => {
+            if (audio.duration) {
+                progress.value = (audio.currentTime / audio.duration) * 100;
+                currentTimeEl.textContent = formatTime(audio.currentTime);
+            }
+        };
+
+        audio.onloadedmetadata = () => {
+            durationEl.textContent = formatTime(audio.duration);
+            progress.value = 0;
+            currentTimeEl.textContent = "00:00";
+        };
+
+        audio.onended = () => {
+            if (isLoop) {
+                audio.currentTime = 0;
+                audio.play();
+            } else {
+                nextBtn.onclick();
+            }
+        };
+
+        volume.oninput = () => {
+            audio.volume = volume.value;
+        };
+
+        muteBtn.onclick = () => {
+            audio.muted = !audio.muted;
+            muteBtn.textContent = audio.muted ? "🔊" : "🔇";
+        };
+
+        speed.onchange = () => {
+            audio.playbackRate = parseFloat(speed.value);
+        };
+
+        loopBtn.onclick = () => {
+            isLoop = !isLoop;
+            loopBtn.style.background = isLoop ? "#007bff" : "";
+            loopBtn.style.color = isLoop ? "#fff" : "#2d3a5a";
+        };
+
+        playlist.onclick = (e) => {
+            if (e.target.tagName === 'LI') {
+                const index = Array.from(playlist.children).indexOf(e.target);
+                loadTrack(index);
+                audio.play();
+            }
+        };
+
+        fileInput.onchange = (e) => {
+            const files = Array.from(e.target.files);
+            files.forEach(file => {
+                const url = URL.createObjectURL(file);
+                tracks.push({ src: url, title: file.name });
+                const li = document.createElement('li');
+                li.textContent = file.name;
+                li.setAttribute('data-src', url);
+                playlist.appendChild(li);
+            });
+            if (tracks.length === files.length) {
+                loadTrack(0);
+            }
+        };
+
+        function formatTime(sec) {
+            const m = Math.floor(sec / 60).toString().padStart(2, '0');
+            const s = Math.floor(sec % 60).toString().padStart(2, '0');
+            return `${m}:${s}`;
+        }
+
+        // Inicializar
+        if (tracks.length > 0) loadTrack(0);
+    </script>
+</body>
+</html>

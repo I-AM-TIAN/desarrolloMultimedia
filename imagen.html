@@ -1,0 +1,303 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <title>Editor de Imágenes</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@500;700&display=swap" rel="stylesheet">
+    <style>
+        body {
+            background: linear-gradient(135deg, #23272f 0%, #3a4252 100%);
+            color: #f4f4f4;
+            font-family: 'Montserrat', Arial, sans-serif;
+            margin: 0;
+            padding: 0;
+            min-height: 100vh;
+        }
+        .container {
+            max-width: 900px;
+            margin: 40px auto;
+            background: rgba(45,50,60,0.97);
+            border-radius: 18px;
+            box-shadow: 0 8px 32px #0007;
+            padding: 40px 28px 28px 28px;
+        }
+        h1 {
+            text-align: center;
+            margin-bottom: 28px;
+            font-weight: 700;
+            color: #7ecfff;
+            letter-spacing: 1px;
+            font-size: 2.2rem;
+        }
+        .controls {
+            display: flex;
+            justify-content: center;
+            gap: 14px;
+            margin-bottom: 28px;
+            flex-wrap: wrap;
+        }
+        .controls input[type="file"] {
+            display: none;
+        }
+        .custom-file-upload {
+            background: linear-gradient(90deg, #7ecfff 60%, #5bb7e7 100%);
+            color: #23272f;
+            padding: 10px 22px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: 600;
+            font-size: 1rem;
+            box-shadow: 0 2px 8px #0002;
+            transition: background 0.2s, transform 0.15s;
+            border: none;
+            outline: none;
+        }
+        .custom-file-upload:hover {
+            background: linear-gradient(90deg, #5bb7e7 60%, #7ecfff 100%);
+            transform: translateY(-2px) scale(1.04);
+        }
+        button {
+            background: linear-gradient(90deg, #7ecfff 60%, #5bb7e7 100%);
+            color: #23272f;
+            border: none;
+            padding: 10px 22px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: 600;
+            font-size: 1rem;
+            box-shadow: 0 2px 8px #0002;
+            transition: background 0.2s, transform 0.15s;
+            outline: none;
+        }
+        button:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+        button:hover:not(:disabled) {
+            background: linear-gradient(90deg, #5bb7e7 60%, #7ecfff 100%);
+            transform: translateY(-2px) scale(1.04);
+        }
+        #canvas-container {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 350px;
+            background: #23272f;
+            border-radius: 12px;
+            border: 2px solid #444a56;
+            margin-bottom: 18px;
+            box-shadow: 0 2px 16px #0003;
+            overflow-x: auto;
+        }
+        canvas {
+            max-width: 100%;
+            max-height: 420px;
+            border-radius: 10px;
+            background: #181b20;
+            box-shadow: 0 2px 12px #0004;
+            transition: box-shadow 0.2s;
+        }
+        .preview {
+            display: flex;
+            justify-content: center;
+            margin-bottom: 18px;
+        }
+        .preview img {
+            max-width: 180px;
+            max-height: 120px;
+            border-radius: 8px;
+            box-shadow: 0 2px 8px #0003;
+            opacity: 0.85;
+            margin-bottom: 6px;
+        }
+        .preview span {
+            display: block;
+            text-align: center;
+            font-size: 0.95rem;
+            color: #b7e6ff;
+            margin-top: 4px;
+        }
+        @media (max-width: 900px) {
+            .container { padding: 10px; }
+            #canvas-container { min-height: 180px; }
+            .controls { gap: 8px; }
+        }
+        @media (max-width: 600px) {
+            h1 { font-size: 1.2rem; }
+            .controls { flex-direction: column; align-items: stretch; }
+            .custom-file-upload, button { width: 100%; }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Editor de Imágenes JS</h1>
+        <div class="preview" id="preview"></div>
+        <div class="controls">
+            <label class="custom-file-upload">
+                <input type="file" id="fileInput" accept="image/*">
+                Cargar Imagen
+            </label>
+            <button id="grayscaleBtn" disabled>Escala de Grises</button>
+            <button id="blurBtn" disabled>Desenfoque</button>
+            <button id="invertBtn" disabled>Invertir</button>
+            <button id="sepiaBtn" disabled>Sepia</button>
+            <button id="brightnessBtn" disabled>Brillo +</button>
+            <button id="contrastBtn" disabled>Contraste +</button>
+            <button id="resetBtn" disabled>Restaurar</button>
+            <button id="saveBtn" disabled>Guardar Imagen</button>
+        </div>
+        <div id="canvas-container">
+            <canvas id="canvas"></canvas>
+        </div>
+    </div>
+    <script>
+        const fileInput = document.getElementById('fileInput');
+        const canvas = document.getElementById('canvas');
+        const ctx = canvas.getContext('2d');
+        const grayscaleBtn = document.getElementById('grayscaleBtn');
+        const blurBtn = document.getElementById('blurBtn');
+        const invertBtn = document.getElementById('invertBtn');
+        const sepiaBtn = document.getElementById('sepiaBtn');
+        const brightnessBtn = document.getElementById('brightnessBtn');
+        const contrastBtn = document.getElementById('contrastBtn');
+        const resetBtn = document.getElementById('resetBtn');
+        const saveBtn = document.getElementById('saveBtn');
+        const preview = document.getElementById('preview');
+
+        let originalImage = null;
+
+        // Cargar imagen
+        fileInput.addEventListener('change', function(e) {
+            const file = e.target.files[0];
+            if (!file) return;
+            const reader = new FileReader();
+            reader.onload = function(evt) {
+                const img = new window.Image();
+                img.onload = function() {
+                    canvas.width = img.width;
+                    canvas.height = img.height;
+                    ctx.drawImage(img, 0, 0);
+                    originalImage = img;
+                    enableButtons();
+                    showPreview(evt.target.result, file.name);
+                };
+                img.src = evt.target.result;
+            };
+            reader.readAsDataURL(file);
+        });
+
+        function showPreview(src, name) {
+            preview.innerHTML = `<div>
+                <img src="${src}" alt="preview">
+                <span>${name}</span>
+            </div>`;
+        }
+
+        function enableButtons() {
+            grayscaleBtn.disabled = false;
+            blurBtn.disabled = false;
+            invertBtn.disabled = false;
+            sepiaBtn.disabled = false;
+            brightnessBtn.disabled = false;
+            contrastBtn.disabled = false;
+            resetBtn.disabled = false;
+            saveBtn.disabled = false;
+        }
+
+        // Escala de grises
+        grayscaleBtn.addEventListener('click', function() {
+            applyFilter((r, g, b, a) => {
+                const gray = 0.299 * r + 0.587 * g + 0.114 * b;
+                return [gray, gray, gray, a];
+            });
+        });
+
+        // Desenfoque (blur simple)
+        blurBtn.addEventListener('click', function() {
+            if (!originalImage) return;
+            canvas.style.filter = 'blur(3px)';
+            setTimeout(() => {
+                ctx.clearRect(0, 0, canvas.width, canvas.height);
+                ctx.filter = 'blur(3px)';
+                ctx.drawImage(originalImage, 0, 0);
+                ctx.filter = 'none';
+                canvas.style.filter = '';
+            }, 100);
+        });
+
+        // Invertir colores
+        invertBtn.addEventListener('click', function() {
+            applyFilter((r, g, b, a) => [255 - r, 255 - g, 255 - b, a]);
+        });
+
+        // Sepia
+        sepiaBtn.addEventListener('click', function() {
+            applyFilter((r, g, b, a) => {
+                const tr = 0.393 * r + 0.769 * g + 0.189 * b;
+                const tg = 0.349 * r + 0.686 * g + 0.168 * b;
+                const tb = 0.272 * r + 0.534 * g + 0.131 * b;
+                return [Math.min(255, tr), Math.min(255, tg), Math.min(255, tb), a];
+            });
+        });
+
+        // Brillo +
+        brightnessBtn.addEventListener('click', function() {
+            applyFilter((r, g, b, a) => [
+                Math.min(255, r + 30),
+                Math.min(255, g + 30),
+                Math.min(255, b + 30),
+                a
+            ]);
+        });
+
+        // Contraste +
+        contrastBtn.addEventListener('click', function() {
+            const contrast = 1.2;
+            const intercept = 128 * (1 - contrast);
+            applyFilter((r, g, b, a) => [
+                Math.min(255, Math.max(0, r * contrast + intercept)),
+                Math.min(255, Math.max(0, g * contrast + intercept)),
+                Math.min(255, Math.max(0, b * contrast + intercept)),
+                a
+            ]);
+        });
+
+        // Restaurar imagen original
+        resetBtn.addEventListener('click', function() {
+            if (!originalImage) return;
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            ctx.drawImage(originalImage, 0, 0);
+        });
+
+        // Guardar imagen
+        saveBtn.addEventListener('click', function() {
+            const link = document.createElement('a');
+            link.download = 'imagen_editada.png';
+            link.href = canvas.toDataURL('image/png');
+            link.click();
+        });
+
+        // Función genérica para aplicar filtros pixel a pixel
+        function applyFilter(filterFn) {
+            if (!originalImage) return;
+            const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+            for (let i = 0; i < imageData.data.length; i += 4) {
+                const [r, g, b, a] = [
+                    imageData.data[i],
+                    imageData.data[i + 1],
+                    imageData.data[i + 2],
+                    imageData.data[i + 3]
+                ];
+                const [nr, ng, nb, na] = filterFn(r, g, b, a);
+                imageData.data[i] = nr;
+                imageData.data[i + 1] = ng;
+                imageData.data[i + 2] = nb;
+                imageData.data[i + 3] = na;
+            }
+            ctx.putImageData(imageData, 0, 0);
+        }
+    </script>
+</body>
+</html>
