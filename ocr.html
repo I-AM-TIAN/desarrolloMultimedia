@@ -1,0 +1,97 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <title>OCR</title>
+    <script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 2em; }
+        #output { margin-top: 1em; white-space: pre-wrap; background: #f0f0f0; padding: 1em; }
+    </style>
+</head>
+<body>
+    <h1>OCR en el Navegador</h1>
+    <div class="container">
+        <input type="file" id="imageInput" accept="image/*">
+        <button id="processBtn">Procesar Imagen</button>
+    </div>
+    <div id="output"></div>
+
+    <script>
+        const imageInput = document.getElementById('imageInput');
+        const processBtn = document.getElementById('processBtn');
+        const output = document.getElementById('output');
+        let selectedFile = null;
+
+        imageInput.addEventListener('change', (e) => {
+            selectedFile = e.target.files[0];
+        });
+
+        processBtn.addEventListener('click', () => {
+            if (!selectedFile) {
+                output.textContent = 'Por favor, selecciona una imagen.';
+                return;
+            }
+            output.textContent = 'Procesando...';
+            Tesseract.recognize(
+                selectedFile,
+                'spa',
+                { logger: m => output.textContent = 'Procesando: ' + Math.round(m.progress * 100) + '%' }
+            ).then(({ data: { text } }) => {
+                output.textContent = text;
+            }).catch(err => {
+                output.textContent = 'Error: ' + err.message;
+            });
+        });
+    </script>
+    <style>
+        body {
+            font-family: 'Segoe UI', Arial, sans-serif;
+            margin: 2em;
+            background: #f8fafc;
+            color: #222;
+        }
+        h1 {
+            color: #2a4365;
+            text-align: center;
+            margin-bottom: 1.5em;
+        }
+        .container {
+            display: flex;
+            justify-content: center;
+            gap: 1em;
+            margin-bottom: 1em;
+        }
+        input[type="file"] {
+            padding: 0.5em;
+            border: 1px solid #bfc9d1;
+            border-radius: 4px;
+            background: #fff;
+        }
+        #processBtn {
+            padding: 0.5em 1.2em;
+            background: #3182ce;
+            color: #fff;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-weight: bold;
+            transition: background 0.2s;
+        }
+        #processBtn:hover {
+            background: #225ea8;
+        }
+        #output {
+            margin: 2em auto 0 auto;
+            max-width: 600px;
+            min-height: 100px;
+            white-space: pre-wrap;
+            background: #f0f4f8;
+            padding: 1.5em;
+            border-radius: 8px;
+            box-shadow: 0 2px 8px rgba(44, 62, 80, 0.07);
+            font-size: 1.1em;
+        }
+    </style>
+</body>
+</html>

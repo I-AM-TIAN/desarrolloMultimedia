@@ -1,0 +1,212 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <title>Editor de Video</title>
+    <style>
+        body {
+            background: linear-gradient(135deg, #232526 0%, #414345 100%);
+            color: #fff;
+            font-family: 'Segoe UI', Arial, sans-serif;
+            min-height: 100vh;
+            margin: 0;
+            padding: 0;
+            text-align: center;
+        }
+        h1 {
+            margin-top: 30px;
+            font-size: 2.2em;
+            letter-spacing: 1px;
+            color: #ffb347;
+            text-shadow: 1px 2px 8px #0008;
+        }
+        #controls, #filters {
+            margin: 20px auto;
+            display: flex;
+            justify-content: center;
+            gap: 15px;
+            flex-wrap: wrap;
+        }
+        #filters label {
+            margin-right: 8px;
+        }
+        input[type="file"] {
+            margin: 20px auto;
+            display: block;
+            color: #fff;
+            background: #444;
+            border: none;
+            padding: 10px;
+            border-radius: 5px;
+        }
+        button {
+            background: #ffb347;
+            color: #222;
+            border: none;
+            padding: 10px 18px;
+            border-radius: 5px;
+            font-size: 1em;
+            cursor: pointer;
+            transition: background 0.2s;
+            box-shadow: 0 2px 8px #0004;
+        }
+        button:disabled {
+            background: #888;
+            color: #ccc;
+            cursor: not-allowed;
+        }
+        select, input[type="range"] {
+            padding: 5px;
+            border-radius: 5px;
+            border: none;
+            font-size: 1em;
+            background: #333;
+            color: #fff;
+        }
+        canvas {
+            margin: 30px auto 0 auto;
+            display: block;
+            border-radius: 12px;
+            box-shadow: 0 4px 24px #0007;
+            max-width: 90vw;
+            max-height: 60vh;
+            background: #111;
+        }
+    </style>
+</head>
+<body>
+    <h1>Editor de Video con Filtros</h1>
+    <input type="file" id="videoInput" accept="video/*">
+    <div id="controls">
+        <button id="playBtn" disabled>Reproducir</button>
+        <button id="pauseBtn" disabled>Pausar</button>
+    </div>
+    <div id="filters">
+        <label for="filterSelect">Filtro:</label>
+        <select id="filterSelect">
+            <option value="none">Sin filtro</option>
+            <option value="sepia">Sepia</option>
+            <option value="bw">Blanco y negro</option>
+            <option value="invert">Invertir colores</option>
+        </select>
+        <label for="brightness">Brillo:</label>
+        <input type="range" id="brightness" min="0" max="2" step="0.01" value="1">
+        <label for="contrast">Contraste:</label>
+        <input type="range" id="contrast" min="0" max="2" step="0.01" value="1">
+    </div>
+    <video id="video" style="display:none"></video>
+    <canvas id="canvas"></canvas>
+
+    <script>
+        const videoInput = document.getElementById('videoInput');
+        const video = document.getElementById('video');
+        const canvas = document.getElementById('canvas');
+        const ctx = canvas.getContext('2d');
+        const playBtn = document.getElementById('playBtn');
+        const pauseBtn = document.getElementById('pauseBtn');
+        const filterSelect = document.getElementById('filterSelect');
+        const brightnessSlider = document.getElementById('brightness');
+        const contrastSlider = document.getElementById('contrast');
+
+        let animationId;
+
+        videoInput.onchange = function(e) {
+            const file = e.target.files[0];
+            if (!file) return;
+            const url = URL.createObjectURL(file);
+            video.src = url;
+            video.load();
+            playBtn.disabled = false;
+            pauseBtn.disabled = false;
+        };
+
+        playBtn.onclick = () => video.play();
+        pauseBtn.onclick = () => video.pause();
+
+        video.onplay = function() {
+            canvas.width = video.videoWidth;
+            canvas.height = video.videoHeight;
+            drawFrame();
+        };
+
+        video.onpause = function() {
+            cancelAnimationFrame(animationId);
+        };
+
+        function applyFilters(data, filter, brightness, contrast) {
+            for (let i = 0; i < data.length; i += 4) {
+                let r = data[i], g = data[i+1], b = data[i+2];
+
+                // Filtros principales
+                switch (filter) {
+                    case 'sepia':
+                        data[i]   = Math.min(0.393*r + 0.769*g + 0.189*b, 255);
+                        data[i+1] = Math.min(0.349*r + 0.686*g + 0.168*b, 255);
+                        data[i+2] = Math.min(0.272*r + 0.534*g + 0.131*b, 255);
+                        break;
+                    case 'bw':
+                        let avg = 0.299*r + 0.587*g + 0.114*b;
+                        data[i] = data[i+1] = data[i+2] = avg;
+                        break;
+                    case 'invert':
+                        data[i] = 255 - r;
+                        data[i+1] = 255 - g;
+                        data[i+2] = 255 - b;
+                        break;
+                    // 'none' no hace nada
+                }
+
+                // Brillo
+                data[i]   = data[i]   * brightness;
+                data[i+1] = data[i+1] * brightness;
+                data[i+2] = data[i+2] * brightness;
+
+                // Contraste
+                // Fórmula: f = (259*(c+255))/(255*(259-c)), c = contraste*255-128
+                let c = contrast * 255 - 128;
+                let f = (259 * (c + 255)) / (255 * (259 - c));
+                data[i]   = f * (data[i]   - 128) + 128;
+                data[i+1] = f * (data[i+1] - 128) + 128;
+                data[i+2] = f * (data[i+2] - 128) + 128;
+
+                // Clamp
+                data[i]   = Math.max(0, Math.min(255, data[i]));
+                data[i+1] = Math.max(0, Math.min(255, data[i+1]));
+                data[i+2] = Math.max(0, Math.min(255, data[i+2]));
+            }
+        }
+
+        function drawFrame() {
+            if (video.paused || video.ended) return;
+            ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+            let frame = ctx.getImageData(0, 0, canvas.width, canvas.height);
+            let data = frame.data;
+            applyFilters(
+                data,
+                filterSelect.value,
+                parseFloat(brightnessSlider.value),
+                parseFloat(contrastSlider.value)
+            );
+            ctx.putImageData(frame, 0, 0);
+            animationId = requestAnimationFrame(drawFrame);
+        }
+
+        // Redibujar al cambiar filtros
+        [filterSelect, brightnessSlider, contrastSlider].forEach(el => {
+            el.oninput = () => {
+                if (!video.paused) return;
+                ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+                let frame = ctx.getImageData(0, 0, canvas.width, canvas.height);
+                let data = frame.data;
+                applyFilters(
+                    data,
+                    filterSelect.value,
+                    parseFloat(brightnessSlider.value),
+                    parseFloat(contrastSlider.value)
+                );
+                ctx.putImageData(frame, 0, 0);
+            };
+        });
+    </script>
+</body>
+</html></div>
